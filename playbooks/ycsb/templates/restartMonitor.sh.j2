@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+if [ "$(pgrep -c -f sensorHostImpl)" == "0" ]; then
+    #echo Running;
+    TIMESTAMP=$(date +%s%N | awk '{printf "%.3f", $0/1000000000}')
+    LOG={{ experiment_tag }}__${TIMESTAMP}
+    LOG_BOOT_INI=${LOG}.sensor
+    sudo service hostsensor restart
+    echo "$TIMESTAMP sensorHostImpl restarted" > ${RESULT}/${LOG_BOOT_INI}
+fi;

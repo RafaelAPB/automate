@@ -1,0 +1,53 @@
+---
+- import_playbook: play-experiment-tag.yml
+
+- name: YCSB deployment - monitor
+  hosts: exp_controller
+  gather_facts: no
+  become: yes
+  any_errors_fatal: true
+  vars:
+    tmux_controller_session: ycsbcontrol
+  vars_files:
+    - play-vars-ycsbsmart.yml
+  
+  tasks:
+    - name: Check if tmux with monitor service is running
+      shell: test -n "$(tmux ls | grep {{ tmux_controller_session }})" && echo "yes" || echo "no"
+      register: is_tmux_running
+
+    # - name: Debug tmux server is running
+    #   debug: 
+    #     msg: "{{ is_tmux_running.stdout }}"
+    
+    - name: Copy default tmux
+      when: is_tmux_running.stdout == "no"
+      copy:
+        src: templates/tmux.conf
+        dest: "{{ default_install_dir }}/tmux.conf"
+
+
+    - name: Start monitor
+      when: is_tmux_running.stdout == "no"
+      shell: 
+        tmux -f {{ default_install_dir }}/tmux.conf new-session -d -s {{tmux_controller_session}} "bash -lc '{{ result_dir }}/runExperiment.sh'"
+      args:
+        chdir: '{{ result_dir }}'
+        executable: /bin/bash
+
+    - name: Wait while monitor starts
+      when: is_tmux_running.stdout == "no"
+      pause:
+        seconds: 4
+    
+    - name: Look for monitor process
+      shell: test -n "$(ps ax | grep {{ tmux_controller_session }}  | grep -v grep)" && echo "yes" || echo "no"
+      register: is_server_running
+
+    - name: Check if monitor service is running
+      when: is_server_running.stdout == "no"
+      fail: msg="Server is not running. it require manual validation or full redeploy"   
+
+         
+
+  

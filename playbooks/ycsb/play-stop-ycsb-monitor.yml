@@ -1,0 +1,38 @@
+---
+- hosts: leader, replicas
+  any_errors_fatal: true
+  vars:
+    tmux_server_session: ycsbcontrol
+  vars_files:
+      - play-vars-ycsbsmart.yml
+  
+  tasks:
+
+    - name: Check if tmux server is running
+      shell: test -n "$(tmux ls | grep {{tmux_server_session}})" && echo "yes" || echo "no"
+      register: is_tmux_running
+
+    - name: Stop service
+      when: is_tmux_running.stdout == "yes"
+      become: yes
+      shell: 
+        sudo killall -s SIGINT -r 'tmux -f /local/dcfp/vftsprint/tmux.conf'
+
+    - name: Wait while service stops
+      pause:
+        seconds: 2
+
+    - name: Stop service
+      when: is_tmux_running.stdout == "yes"
+      become: yes
+      shell: 
+        tmux kill-session -t  "{{tmux_server_session}}"
+    
+    - name: Look for service process
+      shell: test -n "$(ps ax | grep runExperiment.sh | grep -v grep )" && echo "yes" || echo "no"
+      register: is_server_running
+  
+    - name: Check if service process is running
+      when: is_server_running.stdout == "yes"
+      fail: msg="Monitor is still running. Run this again."
+

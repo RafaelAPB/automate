@@ -1,0 +1,16 @@
+- hosts: clients, leader, replicas, exp_controller
+  become: yes
+  any_errors_fatal: true
+  vars_files:
+      - play-vars-ycsbsmart.yml
+
+  tasks:
+    - name: Create environment folder
+      file: 
+        path: "{{ item }}"
+        state: directory
+        mode: "a+rw"
+      with_items:
+        - "{{ default_install_dir }}"
+        - "{{ credentials_dir }}"
+        - "{{ result_dir }}"

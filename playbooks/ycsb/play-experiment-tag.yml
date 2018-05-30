@@ -1,0 +1,71 @@
+
+---
+
+# tasks
+## general
+# pass the current experiment type: baseline or oc.
+
+## from the oc machine
+# get the current timestamp 
+# compute the timestamp when the experiment finishes
+# compute the timestamp for warmup 
+
+# get the current cpu kernel driver
+# get the current governor
+# get the current kernel
+
+# build the tag for the experiment
+
+
+
+- name: YCSB get current facts
+  hosts: leader
+  gather_facts: true
+  become: no
+  vars_files:
+      - play-vars-ycsbsmart.yml
+  vars_prompt:
+    - name: "exptype"
+      prompt: "Set exptype: Is this a baseline or ocXXXXXXXX?"
+      private: no
+      when: hostvars['inesc_oc']['experiment_tag'] is not defined
+
+
+  tasks:
+    - name: Get CPU Power driver
+      shell: cpupower frequency-info | grep driver | awk  '{print $2}'
+      register: cpudriver
+      when: hostvars['inesc_oc']['experiment_tag'] is not defined
+
+
+    # - name: Debug CPU Power driver
+    #   debug: 
+    #     msg: "CPU driver: {{ cpudriver.stdout  }}"
+
+    - name: Get Kernel governor
+      shell: cat /sys/devices/system/cpu/cpu0/cpufreq/scaling_governor
+      register: governor
+      when: hostvars['inesc_oc']['experiment_tag'] is not defined
+
+
+    # - name: Debug Kernel governor
+    #   debug: 
+    #     msg: "CPU driver: {{ governor.stdout  }}"
+
+    - name: Get Kernel 
+      shell: uname -r
+      register: kernel
+      when: hostvars['inesc_oc']['experiment_tag'] is not defined
+
+    # - name: Debug Kernel governor
+    #   debug: 
+    #     msg: "CPU driver: {{ governor.stdout  }}"
+
+    - name: " define facts for this experiment"
+      set_fact:
+        experiment_tag: "{{ exptype }}__{{ experiment }}__{{ kernel.stdout }}__{{ cpudriver.stdout }}__{{ governor.stdout }}__{{ experient_duration }}s"
+      when: hostvars['inesc_oc']['experiment_tag'] is not defined
+
+    - name: Experiment TAG
+      debug: 
+        msg: "tag: {{ experiment_tag  }}"

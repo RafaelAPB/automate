@@ -1,0 +1,39 @@
+
+---
+
+- name: YCSB deployment
+  hosts: clients, leader, replicas
+  gather_facts: False
+  become: no
+  vars_files:
+      - play-vars-ycsbsmart.yml
+
+  tasks:
+    - name: Update hosts configuration for client nodes
+      template:
+        src: templates/ycsbbft/hosts.config.j2
+        dest: "{{bftsmart_install_dir}}/config/hosts.config"
+        
+    - name: Update system files based of the parameters
+      template:
+        src: templates/ycsbbft/system.config.j2
+        dest: "{{bftsmart_install_dir}}/config/system.config"
+        
+    - name: Update workload files based of the parameters
+      template:
+        src: templates/ycsbbft/workloada.j2
+        dest: "{{bftsmart_install_dir}}/config/workloads/workloada"
+
+    - name: Update server execution scripts
+      template:
+        src: templates/ycsbbft/startReplicaYCSB.sh.j2
+        dest: "{{bftsmart_install_dir}}/runscripts/startReplicaYCSB.sh"
+
+    - name: Update client execution scripts
+      template:
+        src: templates/ycsbbft/ycsbClient.sh.j2
+        dest: "{{bftsmart_install_dir}}/runscripts/ycsbClient.sh"
+
+    - name: remove old state
+      file: path="{{bftsmart_install_dir}}/config/currentView" state=absent
+        

@@ -1,0 +1,104 @@
+---
+- hosts: leader, replicas
+  any_errors_fatal: true
+  become: no
+  vars:
+    tmux_server_session: ycsbserver
+  vars_files:
+      - play-vars-ycsbsmart.yml
+  
+  tasks:
+    - name: Check if tmux with SMART service is running
+      shell: test -n "$(tmux ls | grep {{tmux_server_session}})" && echo "yes" || echo "no"
+      register: is_tmux_running
+
+    - name: remove old state
+      when: is_tmux_running.stdout == "no"
+      file: 
+        path: "{{bftsmart_install_dir}}/config/currentView" 
+        state: absent
+
+    - name: Copy default tmux
+      when: is_tmux_running.stdout == "no"
+      copy:
+        src: templates/tmux.conf
+        dest: "{{ default_install_dir }}/tmux.conf"
+
+
+
+- hosts: leader
+  any_errors_fatal: true
+  gather_facts: False
+  become: no
+  vars:
+    tmux_server_session: ycsbserver
+    result_file: "{{ result_dir }}/{{ hostvars['inesc_oc']['experiment_tag'] }}{{ fasttracer_app_info }}{{ fasttracer_option }}"
+  vars_files:
+      - play-vars-ycsbsmart.yml
+  
+  tasks:
+
+    - name: Debug result file
+      debug: 
+        msg: "{{ result_file }}"
+
+    - name: Start service
+      when: is_tmux_running.stdout == "no"
+      shell: 
+        # tmux -f {{ default_install_dir }}/tmux.conf new-session -d -s {{tmux_server_session}} "{{ fasttracer_exe }} -o {{ result_file }}.tracer  -- bash -lc 'runscripts/startReplicaYCSB.sh 0' | tee  {{ result_file }}.ycsb"
+        tmux -f {{ default_install_dir }}/tmux.conf new-session -d -s {{tmux_server_session}} "{{ fasttracer_exe }} -o {{ result_file }}.tracer  -- bash -lc 'runscripts/startReplicaYCSB.sh 0' &>  {{ result_file }}.ycsb"
+      args:
+        chdir: '{{ bftsmart_install_dir }}'
+        executable: /bin/bash
+
+    - name: Wait while starts
+      when: is_tmux_running.stdout == "no"
+      pause:
+        seconds: 5
+    
+    - name: Look for service process
+      shell: test -n "$(ps ax | grep bftsmart.demo.ycsb.YCSBServer | grep -v grep)" && echo "yes" || echo "no"
+      register: is_server_running
+  
+    - name: Check if service process is running
+      when: is_server_running.stdout == "no"
+      fail: msg="Server is not running. it require manual validation or full redeploy"        
+
+
+- hosts: replicas
+  any_errors_fatal: true
+  gather_facts: False
+  vars:
+    tmux_server_session: ycsbserver
+    result_file: "{{ result_dir }}/{{ hostvars['inesc_oc']['experiment_tag'] }}{{ fasttracer_app_info }}{{ fasttracer_option }}"
+
+  vars_files:
+      - play-vars-ycsbsmart.yml
+  
+  tasks:
+    - name: Debug result file
+      debug: 
+        msg: "{{ result_file }}"
+
+    - name: Start service
+      when: is_tmux_running.stdout == "no"
+      shell: 
+        # tmux -f {{ default_install_dir }}/tmux.conf new-session -d -s {{tmux_server_session}} "bash -lc 'runscripts/startReplicaYCSB.sh {{play_hosts.index(inventory_hostname)|int +1}}'"
+        tmux -f {{ default_install_dir }}/tmux.conf new-session -d -s {{tmux_server_session}} "bash -lc 'runscripts/startReplicaYCSB.sh {{play_hosts.index(inventory_hostname)|int +1}}' &>  {{ result_file }}.ycsb"
+
+      args:
+        chdir: '{{ bftsmart_install_dir }}'
+        executable: /bin/bash
+
+    - name: Wait while starts
+      when: is_tmux_running.stdout == "no"
+      pause:
+        seconds: 2
+
+    - name: Look for service process
+      shell: test -n "$(ps ax | grep bftsmart.demo.ycsb.YCSBServer | grep -v grep)" && echo "yes" || echo "no"
+      register: is_server_running
+  
+    - name: Check if service process is running
+      when: is_server_running.stdout == "no"
+      fail: msg="Server is not running. it require manual validation or full redeploy"

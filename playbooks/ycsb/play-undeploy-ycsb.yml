@@ -1,0 +1,6 @@
+---
+- import_playbook: play-stop-ycsb.yml
+- import_playbook: play-undeploy-bftsmart.yml
+- import_playbook: play-undeploy-vftsmart.yml
+- import_playbook: play-undeploy-jdk.yml
+

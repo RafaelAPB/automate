@@ -1,0 +1,4 @@
+---
+- import_playbook: play-deploy-jdk.yml
+- import_playbook: play-deploy-bftsmart.yml
+- import_playbook: play-deploy-vftsmart.yml

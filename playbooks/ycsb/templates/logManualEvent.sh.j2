@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+TIMESTAMP=$(date +%s%N | awk '{printf "%.3f", $0/1000000000}')
+LOG={{ experiment_tag }}__${TIMESTAMP}
+LOG_EVENT=${LOG}.event
+echo "${TIMESTAMP} $1" > ${LOG_EVENT}

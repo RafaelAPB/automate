@@ -1,0 +1,34 @@
+
+---
+# - import_playbook: play-init.yml
+
+- name: YCSB deployment
+  hosts: leader,  exp_controller
+  gather_facts: False
+  become: yes
+  any_errors_fatal: true
+  vars_files:
+    - play-vars-ycsbsmart.yml
+
+
+  tasks:
+    # the init playbook creates the environment
+    # - name: Create environment folder
+    #   file: 
+    #     path: "{{ item }}"
+    #     state: directory
+    #   with_items:
+    #     - "{{ default_install_dir }}"
+    #     - "{{ credentials_dir }}"
+
+    - name: Debug copy from
+      debug: 
+        msg: "{{ result_dir }}"
+
+
+    - name: copy updated monitor files to remote controller
+      synchronize:
+        src: "{{ result_dir }}"
+        dest: "../../playbook_data/"
+        mode: pull
+

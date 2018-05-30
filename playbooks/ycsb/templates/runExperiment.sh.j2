@@ -1,0 +1,10 @@
+#!/bin/bash
+TIMESTAMP=$(date +%s%N | awk '{printf "%.3f", $0/1000000000}')
+#python -u is required to work with tee
+python2.7 -u {{ monitor_install_dir }}/monitor/expctrl.py \
+			--path {{ result_dir }} \
+			--remote_path {{ result_dir }} \
+			--tag {{ experiment_tag }} \
+			--duration {{ experient_duration }} \
+			--warmup {{ warmup_duration }} \
+			--teardown {{ warmup_duration }} |& tee {{ result_dir }}/{{ experiment_tag }}__${TIMESTAMP}.monitor.err

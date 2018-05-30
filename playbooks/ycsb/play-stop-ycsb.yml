@@ -1,0 +1,5 @@
+---
+- import_playbook: play-stop-ycsb-clients.yml
+- import_playbook: play-stop-ycsb-servers.yml
+- import_playbook: play-stop-ycsb-monitor.yml
+

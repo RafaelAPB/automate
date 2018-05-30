@@ -1,0 +1,67 @@
+
+---
+- import_playbook: play-init.yml
+
+- name: YCSB deployment
+  hosts: clients, leader, replicas
+  gather_facts: False
+  become: no
+  any_errors_fatal: true
+  vars_files:
+    - play-vars-ycsbsmart.yml
+
+
+  tasks:
+    # the init playbook already creates the environment
+    # and variables are imported from play-vars-ycsbsmart.yml
+  
+    - name: Setup the Git repo pub key
+      copy: 
+        src: ~/.ssh/id_rsa_github_vftsmart.pub
+        dest: "{{ credentials_dir }}/id_rsa_github_vftsmart.pub"
+        mode: 0400
+
+    - name: Setup the Git repo priv key
+      copy: 
+        src: ~/.ssh/id_rsa_github_vftsmart
+        dest: "{{ credentials_dir }}/id_rsa_github_vftsmart"
+        mode: 0400
+
+    - name: Checkout vftsmart from repository
+      git:
+        repo: git@github.com:danielporto/vftsmart.git
+        dest: "{{ vftsmart_install_dir }}"
+        accept_hostkey: yes
+        force: yes
+        key_file: "{{ credentials_dir }}/id_rsa_github_vftsmart"
+
+    - name: Remove old compilation and jar
+      file: 
+        path: "{{ item }}"
+        state: absent    
+      with_items:
+          - '{{ vftsmart_install_dir }}/bin/vftsmart'
+          - '{{ vftsmart_install_dir }}/bin/BFT-SMaRt.jar'
+
+
+    - name: Build a new Jar
+      shell: 
+        tmux -f {{ default_install_dir }}/tmux.conf new-session -d -s build "bash -lc 'ant'"
+      args:
+        chdir: '{{ vftsmart_install_dir }}'
+        executable: /bin/bash
+
+    - name: Wait while ant compiles the new jar
+      pause:
+        seconds: 10
+
+    - name: Ensure the presence of a new jar
+      file: 
+        path: '{{ vftsmart_install_dir }}/bin/BFT-SMaRt.jar'
+        state: file    
+
+
+    - name: remove old state
+      file: 
+        path: '{{ vftsmart_install_dir }}/config/currentView' 
+        state: absent

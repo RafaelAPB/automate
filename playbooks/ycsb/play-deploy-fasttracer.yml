@@ -1,0 +1,56 @@
+
+---
+
+- name: Fasttracer deployment
+  hosts: clients, leader, replicas
+  gather_facts: False
+  become: no
+  vars_files:
+      - play-vars-ycsbsmart.yml
+
+  tasks:
+
+    - name: Create environment folder
+      file: 
+        path: "{{ item }}"
+        state: directory
+      with_items:
+        - "{{ default_install_dir }}"
+        - "{{ credentials_dir }}"
+
+    # install pin
+    - name: Unarchive intel pin
+      unarchive:
+        src: "{{ intel_pin_bundle_url }}"
+        dest: "{{ default_install_dir }}"
+        remote_src: yes
+
+    # download fasttracer
+    - name: Checkout fasttracer from repository
+      git:
+        repo: https://github.com/danielporto/opmixtracer.git
+        dest: "{{ fastracer_install_dir }}"
+        force: yes
+
+    # compile fasttracer
+    - name: Build the fasttracer pintool
+      shell: 
+        tmux -f {{ default_install_dir }}/tmux.conf new-session -d -s build "bash -lc 'PIN_ROOT={{ intel_pin_install_dir }} make'"
+      args:
+        chdir: '{{ fastracer_install_dir }}'
+        executable: /bin/bash
+      register: compilation
+
+    - name: Wait while make builds the pintool
+      pause:
+        seconds: 10
+    
+    - name: Ensure the pintool was built
+      file: 
+        path: '{{ fastracer_install_dir }}/obj-intel64/fasttracer.so'
+        state: file    
+
+    
+
+        
+        

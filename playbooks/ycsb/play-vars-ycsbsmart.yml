@@ -1,0 +1,84 @@
+---
+
+
+
+# System default
+default_install_dir: "/local/dcfp/vftsprint"
+bftsmart_install_dir: "{{ default_install_dir }}/bftsmart"
+vftsmart_install_dir: "{{ default_install_dir }}/vftsmart"
+monitor_install_dir: "{{ default_install_dir }}/sprint_eval"
+sdkman_folder: "{{ default_install_dir}}/sdkman"
+credentials_dir: "{{ default_install_dir }}/keys"
+fastracer_install_dir: "{{ default_install_dir }}/fasttracer"
+intel_pin_bundle_url: "https://people.mpi-sws.org/~dcfp/packages/kaioken/pin-3.2-81205-gcc-linux.tar.gz" 
+intel_pin_install_dir: "{{ default_install_dir }}/pin-3.2-81205-gcc-linux"
+fasttracer_option: "-opcode"
+fasttracer_app_info: "-dynamic-leader-load"
+
+fasttracer_exe: "{{ intel_pin_install_dir }}/pin  -ifeellucky -t {{ fastracer_install_dir }}/obj-intel64/fasttracer.so {{ fasttracer_option }} "
+
+
+java_version: '8.0.163-zulu'
+ant_version: '1.10.1'
+
+#---------------------------------------------------------------------------
+# Experiment control
+#---------------------------------------------------------------------------
+experient_duration: 600
+warmup_duration: 30
+experiment: "YCSB"
+result_dir: "{{ default_install_dir }}/data/wkld_characterization/centos7/{{ experiment }}"
+
+#---------------------------------------------------------------------------
+# Variables for YCSB deployment
+#------------------------------------------------------------------------------
+# Smart variables
+apache_url: 'http://example.com/apache'
+system_servers_num: "4"
+system_servers_f: "1"
+system_totalordermulticast_maxbatchsize: "400"
+system_communication_useSignatures: "0"
+system_communication_useMACs: "1"
+system_debug: "0"
+system_totalordermulticast_log: "True"
+system_totalordermulticast_log_parallel: "False"
+system_totalordermulticast_log_to_disk: "False"
+system_totalordermulticast_sync_log: "False"
+system_totalordermulticast_checkpoint_to_disk: "False"
+system_totalordermulticast_sync_ckp: "False"
+system_totalordermulticast_checkpoint_period: "1000"
+system_totalordermulticast_global_checkpoint_period: "120000"
+system_initial_view: "0,1,2,3"
+system_bft: "True"
+#------------------------------------------------------------------------------
+#- name: Set default parameters for workload file
+readallfields: "true"
+readproportion: "0.5"
+updateproportion: "0.5"
+scanproportion: "0"
+smart_initkey: "1000"
+insertproportion: "0"
+operationcount: "0"
+maxexecutiontime: "120"
+smart_key: "1000"
+recordcount: "1000000000"
+# recordcount: "100000"
+insertstart: ""
+insertcount: ""
+
+# the following part is kept for example of how do operations here.
+# it is no longer necessary as the "start" playbook will split the load
+# amongst clients automatically.
+
+# parallel load - configured at the load playbook. 
+# record count only need to be updated here. 
+# knowing we have 5 clients, 4*200000000 = 1000000000 = recordcount
+# insertstart: "insertstart={{ (200000000*play_hosts.index(inventory_hostname))|int }}"
+# insertcount: "insertcount=200000000"
+
+#------------------------------------------------------------------------------
+# - name: Set runtime parameters 
+java_opts: "-Xms2G -Xmx8G"
+# number of clients per host must be smaller than smart_initkey
+clients_per_host: "100"
+

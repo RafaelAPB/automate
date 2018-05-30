@@ -1,0 +1,98 @@
+
+---
+
+- name: Check if servers are up
+  hosts: leader, replicas
+  gather_facts: False
+  become: no
+  vars_files:
+      - play-vars-ycsbsmart.yml
+
+  tasks:
+    # check if leader is up and running
+    # check if replicas are up and running
+    - name: Look for service process
+      shell: test -n "$(ps ax | grep bftsmart.demo.ycsb.YCSBServer)" && echo "yes" || echo "no"
+      register: is_server_running
+  
+    - name: Check if service process is running
+      when: is_server_running.stdout == "no"
+      fail: msg="Server is not running. Start the servers before start loading data."
+        
+
+
+
+
+#### TODO separate client keys and reset insert start count
+- name: YCSB start clients
+  hosts: clients
+  gather_facts: False
+  become: no
+  vars_files:
+      - play-vars-ycsbsmart.yml 
+  vars:
+    tmux_client_session: ycsbclient
+
+    # placeholders
+    record_per_client_count: "{{ ((recordcount|int)/(play_hosts|length))|int }}"
+    insertstart: ""
+    insertcount: ""
+
+
+  tasks:
+    # avoid running if the client is operating.
+    - name: Check if tmux server is running
+      shell: test -n "$(tmux ls | grep {{tmux_client_session}})" && echo "yes" || echo "no"
+      register: is_tmux_running
+    - name: Check if service process is running
+      when: is_tmux_running.stdout == "yes"
+      fail: msg="Clients are running. Let them finish or force stop before start again."
+
+
+
+    # configure client options
+    - name: Override settings for parallel load
+      set_fact:
+        # parallel load - knowing we have 5 clients, 4*200000000 = 1000000000
+        insertstart: "insertstart={{ ((record_per_client_count)|int * play_hosts.index(inventory_hostname))|int }}"
+        insertcount: "insertcount={{ record_per_client_count }}"
+        
+    - name: Debug
+      debug: 
+        msg: "Total clients: {{ play_hosts|length }}; batch size: {{ record_per_client_count }}; start_at: {{ insertstart }}; total: {{ insertcount }}"
+
+    # deploy client load configuration
+    - name: Update workload files based of the parameters
+      template:
+        src: templates/ycsbbft/workloada.j2
+        dest: "{{bftsmart_install_dir}}/config/workloads/workloada"
+
+    - name: remove old state
+      file: 
+        path: "{{bftsmart_install_dir}}/config/currentView" 
+        state: absent
+
+    - name: Copy default tmux
+      copy:
+        src: templates/tmux.conf
+        dest: "{{ default_install_dir }}/tmux.conf"
+
+    # load data
+    - name: Start loading data to service
+      shell: 
+        tmux -f {{ default_install_dir }}/tmux.conf new-session -d -s {{tmux_client_session}} "runscripts/ycsbLoader.sh"
+      args:
+        chdir: '{{ bftsmart_install_dir }}'
+        executable: /bin/bash
+
+    - name: Wait while starts
+      pause:
+        seconds: 2
+    
+    - name: Look for service process
+      shell: test -n "$(ps ax | grep bftsmart.demo.ycsb.YCSBClient)" && echo "yes" || echo "no"
+      register: is_running
+  
+    - name: Check if service process is running
+      when: is_running.stdout == "no"
+      fail: msg="Server is not running. it require manual validation or full redeploy"

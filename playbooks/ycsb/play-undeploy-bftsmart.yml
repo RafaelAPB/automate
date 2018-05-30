@@ -1,0 +1,16 @@
+
+---
+- name: YCSB deployment
+  hosts: clients, leader, replicas
+  gather_facts: False
+  become: no
+  any_errors_fatal: true
+  vars_files:
+    - play-vars-ycsbsmart.yml
+
+
+  tasks:
+    - name: Remove environment folder
+      file: 
+        path: "{{ bftsmart_install_dir }}"
+        state: absent

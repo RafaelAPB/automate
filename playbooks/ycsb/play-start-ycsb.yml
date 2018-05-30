@@ -1,0 +1,8 @@
+---
+- import_playbook: play-configure-ycsb.yml
+- import_playbook: play-deploy-monitor-cfg.yml
+
+- import_playbook: play-start-monitor.yml
+- import_playbook: play-start-ycsb-servers.yml
+- import_playbook: play-load-ycsb.yml
+# - import_playbook: play-start-ycsb-clients.yml

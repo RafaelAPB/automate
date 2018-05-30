@@ -1,0 +1,41 @@
+
+---
+- import_playbook: play-experiment-tag.yml
+
+- name: YCSB deployment - monitor
+  hosts: exp_controller
+  gather_facts: true
+  become: no
+  any_errors_fatal: true
+  vars_files:
+    - play-vars-ycsbsmart.yml
+
+
+  tasks:
+    - name: Create monitor environment folder
+      file: 
+        path: "{{ item }}"
+        state: directory
+      with_items:
+        - "{{ result_dir }}"
+        - "{{ monitor_install_dir }}"
+        - "{{ monitor_install_dir }}/monitor"
+
+    - name: copy updated monitor files to remote controller
+      synchronize:
+        src: ../../monitor
+        dest: "{{ monitor_install_dir }}"
+
+    # - name: " Read the experiment tag from the leader"
+    #   debug: "var=hostvars['inesc_oc']['experiment_tag']"
+    
+    - name: set tag for experiment controller
+      set_fact:
+        experiment_tag: "{{ hostvars['inesc_oc']['experiment_tag'] }}"
+
+
+    - name: Deploy experiment start script
+      template:
+        src: templates/runExperiment.sh.j2
+        dest: "{{ result_dir }}/runExperiment.sh"
+        mode: 'a+x'

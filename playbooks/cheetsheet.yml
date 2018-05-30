@@ -1,0 +1,48 @@
+
+---
+# if you have dependency on other playbooks (one system has to be ready before this)
+- import_playbook: otherplaybook.yml
+
+
+- name: YCSB deployment - monitor  # just a simple mane for the task
+  hosts: exp_controller   # list of hosts to apply this task
+  gather_facts: true      # fetch some context from the nodes (OS type, processor...) can be useful but takes time
+  become: no              # run this command as "sudo" or not
+  any_errors_fatal: true  # stop playbook if task fail
+  vars_files:             
+    - play-vars-ycsbsmart.yml  #directly import variables from this file - keep things organized.
+ 
+
+  # set of tasks to apply to this host, every task start with a "name"
+
+  tasks:
+    - name: Create monitor environment folder
+      file: 
+        path: "{{ item }}"
+        state: directory
+      with_items:
+        - "{{ result_dir }}"
+        - "{{ monitor_install_dir }}"
+        - "{{ monitor_install_dir }}/monitor"
+
+# check the YCSB dir to see examples on
+How to copy files to server
+How to downlaod files from servers
+How to install java using roles (special playbooks)
+How to translate a template and install to replicas (useful when every replica has a special configuration based
+on the node ID)
+How to pass command line variables
+How to check for a line in a file
+How to check if a process is running
+How to do an action based on the state of a variable
+How to import variables from a file
+How to import tasks from other playbooks
+How to set the execution bit to a script
+How to call scripts and read their output
+How to call scripts and let them running asynchronously
+
+Plus, there is a directory call example that has a suggestion  
+to organize your playbooks.
+
+Enjoy
+

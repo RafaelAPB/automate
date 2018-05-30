@@ -1,0 +1,28 @@
+
+---
+- name: YCSB deployment
+  hosts: clients, leader, replicas
+  gather_facts: False
+  become: yes
+  any_errors_fatal: true
+  vars_files:
+    - play-vars-ycsbsmart.yml
+
+
+  tasks:
+    - name: Create environment folder
+      file: 
+        path: "{{ sdkman_folder }}"
+        state: absent
+
+    - name: Remove sdkman from .profile
+      lineinfile: 
+        path: ~/.profile 
+        regexp: '\[\[ \-s \"{{sdkman_folder}}\/.*'
+        state: absent
+
+    - name: Remove sdkman from .bashrc
+      lineinfile: 
+        path: ~/.bashrc 
+        regexp: '\[\[ \-s \"{{sdkman_folder}}\/.*'
+        state: absent

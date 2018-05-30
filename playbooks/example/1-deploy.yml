@@ -1,0 +1,85 @@
+#------------------------------------------------------------------------------
+# This file has examples of ansible tasks often used
+# for deploying resources and building code on remote machines
+# 
+# Author: Daniel Porto - danielporto@tecnico.ulisboa.pt
+#------------------------------------------------------------------------------
+---
+
+# allow passing variable as command line arguments
+- import_playbook: cmdargs.yml
+
+
+# settings that are common to all tasks in this playbook
+# they can be overwritten if required at each task definition
+- name: Deployment
+  
+  # list of group of hosts where these tasks should run
+  # it is defined at the inventory file
+  hosts: clients, leader, replicas
+
+  # preload common remote node state into the hostvars map
+  # to get the Linux distro for instance
+  gather_facts: False
+
+  # require root on remote nodes
+  become: no
+
+  # load common variables
+  vars_files:
+    - settings.yml
+
+  # Stop execution in case of errors.
+  any_errors_fatal: true
+
+  # tasks required for the deployment
+  tasks:
+    # this task invokes the module file to create the deployment folders
+    # it also has an example of how to do a loop
+    - name: Create environment folder
+      file: 
+        path: "{{ item }}"
+        state: directory
+      with_items:
+        - "{{ default_install_dir }}"
+        - "{{ credentials_dir }}"
+
+
+    # Check out code from public git repositories
+    - name: Checkout bftsmart from repository
+      git:
+        repo: https://github.com/danielporto/bftsmart.git
+        dest: "{{ bftsmart_install_dir }}"
+        force: yes
+
+    # recompile code on remote nodes
+    - name: Remove old compilation and jar
+      file: 
+        path: "{{ item }}"
+        state: absent    
+      with_items:
+          - '{{ bftsmart_install_dir }}/bin/bftsmart'
+          - '{{ bftsmart_install_dir }}/bin/BFT-SMaRt.jar'
+
+
+    - name: Build a new Jar
+      shell: 
+        tmux -f {{ default_install_dir }}/tmux.conf new-session -d -s build "bash -lc 'ant'"
+      args:
+        chdir: '{{ bftsmart_install_dir }}'
+        executable: /bin/bash
+
+    - name: Wait while ant compiles the new jar
+      pause:
+        seconds: 10
+
+    - name: Ensure the presence of a new jar
+      file: 
+        path: '{{ bftsmart_install_dir }}/bin/BFT-SMaRt.jar'
+        state: file    
+
+
+    - name: Ensure old state from previous executions are cleaned
+      file: 
+        path: '{{ bftsmart_install_dir }}/config/currentView' 
+        state: absent
